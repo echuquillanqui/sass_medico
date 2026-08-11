@@ -1,0 +1,122 @@
+<?php
+
+use App\Http\Controllers\Admin\AuditoriaController;
+use App\Http\Controllers\Admin\EmpresaConfigController;
+use App\Http\Controllers\Admin\EmpresaController;
+use App\Http\Controllers\Admin\MetricasController;
+use App\Http\Controllers\Admin\UsuarioController;
+use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BuscadorController;
+use App\Http\Controllers\CitaController;
+use App\Http\Controllers\ConsultaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\InsumoController;
+use App\Http\Controllers\ModuloController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\Portal\PortalAuthController;
+use App\Http\Controllers\Portal\PortalController;
+use App\Http\Controllers\Portal\ReservaController;
+use App\Http\Controllers\ReporteController;
+use Illuminate\Support\Facades\Route;
+
+// ---------- Autenticacion (personal) ----------
+Route::get('/', fn () => redirect()->route('login'));
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'show'])->name('login');
+    Route::post('/login', [LoginController::class, 'login']);
+});
+
+Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
+
+// ---------- Portal del paciente ----------
+Route::prefix('portal')->group(function () {
+    Route::get('/login', [PortalAuthController::class, 'show'])->name('portal.login');
+    Route::post('/login', [PortalAuthController::class, 'login'])->name('portal.login.attempt');
+
+    Route::middleware('auth:paciente')->group(function () {
+        Route::post('/logout', [PortalAuthController::class, 'logout'])->name('portal.logout');
+        Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
+        Route::get('/historia', [PortalController::class, 'historia'])->name('portal.historia');
+        Route::get('/pagos', [PortalController::class, 'pagos'])->name('portal.pagos');
+        Route::get('/reservar', [ReservaController::class, 'create'])->name('portal.reservar');
+        Route::post('/reservar', [ReservaController::class, 'store'])->name('portal.reservar.store');
+    });
+});
+
+// ---------- Area privada (personal) ----------
+Route::middleware('auth')->group(function () {
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Perfil del usuario
+    Route::get('/perfil', [PerfilController::class, 'edit'])->name('perfil.edit');
+    Route::put('/perfil', [PerfilController::class, 'update'])->name('perfil.update');
+    Route::put('/perfil/password', [PerfilController::class, 'password'])->name('perfil.password');
+
+    // Gestion clinica (empresa)
+    Route::middleware('role:admin,medico,recepcion')->group(function () {
+        Route::get('/buscar', [BuscadorController::class, 'index'])->name('buscador.index');
+
+        // Notificaciones
+        Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
+        Route::post('/notificaciones/leer', [NotificacionController::class, 'marcarTodas'])->name('notificaciones.leer');
+
+        Route::get('/pacientes/{paciente}/crecimiento', [PacienteController::class, 'crecimiento'])->name('pacientes.crecimiento');
+        Route::get('/pacientes/{paciente}/constancia', [DocumentoController::class, 'constancia'])->name('documentos.constancia');
+        Route::resource('pacientes', PacienteController::class);
+        Route::resource('citas', CitaController::class);
+
+        // Historia clinica / consultas
+        Route::get('/consultas/create', [ConsultaController::class, 'create'])->name('consultas.create');
+        Route::post('/consultas', [ConsultaController::class, 'store'])->name('consultas.store');
+        Route::get('/consultas/{consulta}', [ConsultaController::class, 'show'])->name('consultas.show');
+        Route::get('/consultas/{consulta}/edit', [ConsultaController::class, 'edit'])->name('consultas.edit');
+        Route::put('/consultas/{consulta}', [ConsultaController::class, 'update'])->name('consultas.update');
+        Route::get('/consultas/{consulta}/receta', [ConsultaController::class, 'receta'])->name('consultas.receta');
+        Route::get('/consultas/{consulta}/certificado', [DocumentoController::class, 'certificado'])->name('documentos.certificado');
+
+        // Agenda / calendario
+        Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
+        Route::get('/agenda/eventos', [AgendaController::class, 'eventos'])->name('agenda.eventos');
+        Route::put('/agenda/citas/{cita}/mover', [AgendaController::class, 'mover'])->name('agenda.mover');
+
+        // Facturacion / pagos
+        Route::resource('pagos', PagoController::class)->except(['show']);
+        Route::get('/pagos/{pago}/recibo', [PagoController::class, 'recibo'])->name('pagos.recibo');
+
+        // Inventario
+        Route::resource('insumos', InsumoController::class)->except(['show']);
+        Route::get('/insumos/{insumo}/movimientos', [InsumoController::class, 'movimientos'])->name('insumos.movimientos');
+        Route::post('/insumos/{insumo}/movimientos', [InsumoController::class, 'registrarMovimiento'])->name('insumos.movimiento.store');
+
+        // Reportes
+        Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('/reportes/financiero', [ReporteController::class, 'financiero'])->name('reportes.financiero');
+        Route::get('/reportes/pdf', [ReporteController::class, 'pdf'])->name('reportes.pdf');
+        Route::get('/reportes/excel', [ReporteController::class, 'excel'])->name('reportes.excel');
+    });
+
+    // Modulos por especialidad
+    Route::get('/modulo/{slug}', [ModuloController::class, 'show'])
+        ->middleware('module')->name('modulo.show')->where('slug', '[a-z0-9\-]+');
+
+    // Administracion de la empresa — solo admin
+    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::resource('usuarios', UsuarioController::class)->except('show');
+        Route::get('/empresa', [EmpresaConfigController::class, 'edit'])->name('empresa.edit');
+        Route::put('/empresa', [EmpresaConfigController::class, 'update'])->name('empresa.update');
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria.index');
+    });
+
+    // Panel del dueno del SaaS — solo superadmin
+    Route::middleware('role:superadmin')->prefix('admin')->name('admin.')->group(function () {
+        Route::resource('empresas', EmpresaController::class)->except('show');
+        Route::get('/metricas', [MetricasController::class, 'index'])->name('metricas.index');
+    });
+});
