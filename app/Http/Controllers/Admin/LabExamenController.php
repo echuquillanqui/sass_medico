@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LabExamen;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class LabExamenController extends Controller
 {
@@ -15,10 +16,12 @@ class LabExamenController extends Controller
 
     public function index()
     {
-        $examenes = LabExamen::where('empresa_id', $this->empresaId())
-            ->orderBy('categoria')->orderBy('nombre')->get();
+        $examenes = LabExamen::with('padre')->where('empresa_id', $this->empresaId())
+            ->orderByRaw('padre_id is not null')->orderBy('categoria')->orderBy('nombre')->get();
+        $examenesPrincipales = LabExamen::where('empresa_id', $this->empresaId())
+            ->whereNull('padre_id')->orderBy('nombre')->get();
 
-        return view('admin.lab_examenes.index', compact('examenes'));
+        return view('admin.lab_examenes.index', compact('examenes', 'examenesPrincipales'));
     }
 
     public function store(Request $request)
@@ -50,6 +53,12 @@ class LabExamenController extends Controller
     {
         return $request->validate([
             'nombre' => ['required', 'string', 'max:120'],
+            'padre_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('lab_examenes', 'id')->where(fn ($query) => $query
+                    ->where('empresa_id', $this->empresaId())->whereNull('padre_id')),
+            ],
             'categoria' => ['nullable', 'string', 'max:60'],
             'unidad' => ['nullable', 'string', 'max:30'],
             'valor_referencia' => ['nullable', 'string', 'max:60'],

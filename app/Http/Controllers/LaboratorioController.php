@@ -8,6 +8,7 @@ use App\Models\Paciente;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class LaboratorioController extends Controller
 {
@@ -42,6 +43,14 @@ class LaboratorioController extends Controller
             'observaciones' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.nombre' => ['nullable', 'string', 'max:120'],
+            'items.*.lab_examen_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('lab_examenes', 'id')->where('empresa_id', $this->empresaId()),
+            ],
+            'items.*.grupo' => ['nullable', 'string', 'max:120'],
+            'items.*.unidad' => ['nullable', 'string', 'max:30'],
+            'items.*.valor_referencia' => ['nullable', 'string', 'max:60'],
         ]);
 
         $orden = LabOrden::create([
@@ -57,6 +66,7 @@ class LaboratorioController extends Controller
             if (! empty($it['nombre'])) {
                 $orden->items()->create([
                     'lab_examen_id' => $it['lab_examen_id'] ?? null,
+                    'grupo' => $it['grupo'] ?? null,
                     'nombre' => $it['nombre'],
                     'unidad' => $it['unidad'] ?? null,
                     'valor_referencia' => $it['valor_referencia'] ?? null,
@@ -135,7 +145,9 @@ class LaboratorioController extends Controller
             'orden' => new LabOrden(['fecha' => now()->toDateString()]),
             'pacientes' => Paciente::where('empresa_id', $this->empresaId())->orderBy('apellidos')->get(),
             'medicos' => User::where('empresa_id', $this->empresaId())->where('role', 'medico')->get(),
-            'examenes' => LabExamen::where('empresa_id', $this->empresaId())->where('activo', true)->orderBy('nombre')->get(),
+            'examenes' => LabExamen::with(['componentes' => fn ($q) => $q->where('activo', true)])
+                ->where('empresa_id', $this->empresaId())->where('activo', true)
+                ->whereNull('padre_id')->orderBy('nombre')->get(),
         ];
     }
 }

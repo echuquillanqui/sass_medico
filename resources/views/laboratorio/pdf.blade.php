@@ -25,7 +25,14 @@
 
         <table class="res">
             <tr><th>Examen</th><th>Resultado</th><th>Unidad</th><th>Valor de referencia</th></tr>
-            @foreach($orden->items as $it)
+        @php $grupoActual = null; @endphp
+        @foreach($orden->items as $it)
+            @if($it->grupo && $it->grupo !== $grupoActual)
+                <tr><td colspan="4" style="background:#edf2f7"><strong>{{ $it->grupo }}</strong></td></tr>
+                @php $grupoActual = $it->grupo; @endphp
+            @elseif(!$it->grupo)
+                @php $grupoActual = null; @endphp
+            @endif
                 <tr>
                     <td>{{ $it->nombre }}</td>
                     <td class="{{ $it->fuera_rango ? 'alto' : '' }}">{{ $it->resultado ?? '—' }}{!! $it->fuera_rango ? ' *' : '' !!}</td>

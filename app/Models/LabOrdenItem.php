@@ -10,7 +10,7 @@ class LabOrdenItem extends Model
     protected $table = 'lab_orden_items';
 
     protected $fillable = [
-        'lab_orden_id', 'lab_examen_id', 'nombre', 'unidad',
+        'lab_orden_id', 'lab_examen_id', 'grupo', 'nombre', 'unidad',
         'valor_referencia', 'resultado', 'fuera_rango', 'notas',
     ];
 

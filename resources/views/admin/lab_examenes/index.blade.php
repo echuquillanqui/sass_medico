@@ -3,7 +3,7 @@
 
 @section('content')
     @php $mon = auth()->user()->empresa->moneda ?? 'S/'; @endphp
-    <div class="page-head"><div><h1>Catálogo de exámenes</h1><p>Exámenes de laboratorio disponibles para las órdenes.</p></div></div>
+    <div class="page-head"><div><h1>Catálogo de exámenes</h1><p>Crea exámenes individuales o agrupa varios componentes bajo un solo título.</p></div></div>
 
     <div class="grid g-2">
         <div class="card" style="height:fit-content">
@@ -11,6 +11,16 @@
             <form method="POST" action="{{ route('admin.lab-examenes.store') }}">
                 @csrf
                 <div class="field mb"><label>Nombre *</label><input name="nombre" required>@error('nombre')<span class="err">{{ $message }}</span>@enderror</div>
+                <div class="field mb"><label>Forma parte de</label>
+                    <select name="padre_id">
+                        <option value="">— Examen individual o título principal —</option>
+                        @foreach($examenesPrincipales as $principal)
+                            <option value="{{ $principal->id }}" @selected(old('padre_id') == $principal->id)>{{ $principal->nombre }}</option>
+                        @endforeach
+                    </select>
+                    <small class="muted">Ejemplo: crea “Examen de orina” y luego agrega color, pH y proteínas como sus componentes.</small>
+                    @error('padre_id')<span class="err">{{ $message }}</span>@enderror
+                </div>
                 <div class="field mb"><label>Categoría</label><input name="categoria" placeholder="Hematología, Bioquímica..."></div>
                 <div class="form-grid mb">
                     <div class="field"><label>Unidad</label><input name="unidad" placeholder="mg/dL"></div>
@@ -22,11 +32,14 @@
         </div>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Examen</th><th>Categoría</th><th>Referencia</th><th>Precio</th><th></th></tr></thead>
+                <thead><tr><th>Examen / componente</th><th>Categoría</th><th>Referencia</th><th>Precio</th><th></th></tr></thead>
                 <tbody>
                 @forelse($examenes as $e)
                     <tr>
-                        <td><b>{{ $e->nombre }}</b>@if($e->unidad)<br><small class="muted">{{ $e->unidad }}</small>@endif</td>
+                        <td>
+                            @if($e->padre)<small class="muted"><i class="fa-solid fa-turn-up" style="transform:rotate(90deg)"></i> {{ $e->padre->nombre }}</small><br>@endif
+                            <b>{{ $e->nombre }}</b>@if($e->unidad)<br><small class="muted">{{ $e->unidad }}</small>@endif
+                        </td>
                         <td>{{ $e->categoria ?? '—' }}</td>
                         <td>{{ $e->valor_referencia ?? '—' }}</td>
                         <td>@money($e->precio, null, 2)</td>

@@ -25,7 +25,14 @@
         <table>
             <thead><tr><th>Examen</th><th>Resultado</th><th>Unidad</th><th>Referencia</th><th>Fuera de rango</th><th>Notas</th></tr></thead>
             <tbody>
+            @php $grupoActual = null; @endphp
             @foreach($orden->items as $it)
+                @if($it->grupo && $it->grupo !== $grupoActual)
+                    <tr><td colspan="6" style="background:var(--surface-2)"><b><i class="fa-solid fa-vials"></i> {{ $it->grupo }}</b></td></tr>
+                    @php $grupoActual = $it->grupo; @endphp
+                @elseif(!$it->grupo)
+                    @php $grupoActual = null; @endphp
+                @endif
                 <tr>
                     <td><b>{{ $it->nombre }}</b></td>
                     <td><input name="items[{{ $it->id }}][resultado]" value="{{ $it->resultado }}" style="width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px"></td>

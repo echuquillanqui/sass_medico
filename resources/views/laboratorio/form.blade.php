@@ -36,11 +36,18 @@
     @push('scripts')
     <script>
     @php
-        $catalogoExamenes = $examenes->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'unidad' => $e->unidad, 'ref' => $e->valor_referencia]);
+        $catalogoExamenes = $examenes->map(fn ($e) => [
+            'id' => $e->id,
+            'nombre' => $e->nombre,
+            'unidad' => $e->unidad,
+            'ref' => $e->valor_referencia,
+            'componentes' => $e->componentes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre, 'unidad' => $c->unidad, 'ref' => $c->valor_referencia])->values(),
+        ]);
     @endphp
     const CATALOGO = @json($catalogoExamenes);
+    let nextItem = 0;
     function addItem(){
-        const i = document.querySelectorAll('#items .lab-item').length;
+        const i = nextItem++;
         const opts = CATALOGO.map(e=>'<option value="'+e.id+'" data-u="'+(e.unidad||'')+'" data-r="'+(e.ref||'')+'">'+e.nombre+'</option>').join('');
         const div = document.createElement('div');
         div.className='lab-item';
@@ -58,11 +65,32 @@
         document.getElementById('items').appendChild(div);
     }
     function fromCat(sel,i){
-        const o=sel.options[sel.selectedIndex];
+        const o=sel.options[sel.selectedIndex], examen=CATALOGO.find(e=>String(e.id)===o.value);
+        if(examen && examen.componentes.length){
+            sel.closest('.lab-item').remove();
+            examen.componentes.forEach(componente=>addCatalogItem(componente, examen.nombre));
+            return;
+        }
         document.getElementById('e'+i).value = o.value||'';
         document.getElementById('n'+i).value = o.value ? o.text : '';
         document.getElementById('u'+i).value = o.dataset.u||'';
         document.getElementById('r'+i).value = o.dataset.r||'';
+    }
+    function addCatalogItem(examen, grupo){
+        const i = nextItem++, div = document.createElement('div');
+        div.className='lab-item';
+        div.style.cssText='border:1px dashed var(--line);border-radius:12px;padding:12px;margin-bottom:10px';
+        div.innerHTML = '<div class="flex between"><div><small class="muted">'+escapeHtml(grupo)+'</small><br><b>'+escapeHtml(examen.nombre)+'</b></div>'+
+            '<button type="button" class="btn btn-danger btn-sm" onclick="this.closest(&quot;.lab-item&quot;).remove()"><i class="fa-solid fa-xmark"></i></button></div>'+
+            '<input type="hidden" name="items['+i+'][lab_examen_id]" value="'+examen.id+'">'+
+            '<input type="hidden" name="items['+i+'][grupo]" value="'+escapeHtml(grupo)+'">'+
+            '<input type="hidden" name="items['+i+'][nombre]" value="'+escapeHtml(examen.nombre)+'">'+
+            '<input type="hidden" name="items['+i+'][unidad]" value="'+escapeHtml(examen.unidad||'')+'">'+
+            '<input type="hidden" name="items['+i+'][valor_referencia]" value="'+escapeHtml(examen.ref||'')+'">';
+        document.getElementById('items').appendChild(div);
+    }
+    function escapeHtml(value){
+        return String(value).replace(/[&<>'"]/g, char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
     }
     document.addEventListener('DOMContentLoaded', ()=>addItem());
     </script>
