@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LabExamen;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class LabExamenController extends Controller
@@ -27,10 +28,28 @@ class LabExamenController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $componentes = $data['componentes'] ?? [];
+        unset($data['componentes'], $data['modo']);
         $data['empresa_id'] = $this->empresaId();
-        LabExamen::create($data);
 
-        return back()->with('ok', 'Examen agregado al catálogo.');
+        DB::transaction(function () use ($data, $componentes) {
+            $examen = LabExamen::create($data);
+
+            foreach ($componentes as $componente) {
+                $examen->componentes()->create([
+                    ...$componente,
+                    'empresa_id' => $this->empresaId(),
+                    'categoria' => $componente['categoria'] ?? $examen->categoria,
+                    'precio' => $componente['precio'] ?? 0,
+                ]);
+            }
+        });
+
+        $mensaje = count($componentes)
+            ? 'Examen agrupado y sus componentes agregados al catálogo.'
+            : 'Examen agregado al catálogo.';
+
+        return back()->with('ok', $mensaje);
     }
 
     public function update(Request $request, LabExamen $examen)
@@ -63,6 +82,13 @@ class LabExamenController extends Controller
             'unidad' => ['nullable', 'string', 'max:30'],
             'valor_referencia' => ['nullable', 'string', 'max:60'],
             'precio' => ['nullable', 'numeric', 'min:0'],
+            'modo' => ['nullable', Rule::in(['grupo'])],
+            'componentes' => ['exclude_unless:modo,grupo', 'required_if:modo,grupo', 'array', 'min:1'],
+            'componentes.*.nombre' => ['required', 'string', 'max:120'],
+            'componentes.*.categoria' => ['nullable', 'string', 'max:60'],
+            'componentes.*.unidad' => ['nullable', 'string', 'max:30'],
+            'componentes.*.valor_referencia' => ['nullable', 'string', 'max:60'],
+            'componentes.*.precio' => ['nullable', 'numeric', 'min:0'],
         ]);
     }
 }
