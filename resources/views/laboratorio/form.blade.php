@@ -35,7 +35,10 @@
 
     @push('scripts')
     <script>
-    const CATALOGO = @json($examenes->map(fn($e)=>['id'=>$e->id,'nombre'=>$e->nombre,'unidad'=>$e->unidad,'ref'=>$e->valor_referencia]));
+    @php
+        $catalogoExamenes = $examenes->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'unidad' => $e->unidad, 'ref' => $e->valor_referencia]);
+    @endphp
+    const CATALOGO = @json($catalogoExamenes);
     function addItem(){
         const i = document.querySelectorAll('#items .lab-item').length;
         const opts = CATALOGO.map(e=>'<option value="'+e.id+'" data-u="'+(e.unidad||'')+'" data-r="'+(e.ref||'')+'">'+e.nombre+'</option>').join('');

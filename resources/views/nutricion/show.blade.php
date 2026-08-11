@@ -91,7 +91,10 @@
     <script>
     window.addEventListener('load', function(){
         if(!window.Chart) return;
-        const s=@json($evaluaciones->sortBy('fecha')->values()->map(fn($e)=>['f'=>$e->fecha->format('d/m/y'),'peso'=>$e->peso,'imc'=>$e->imc]));
+        @php
+            $datosGrafico = $evaluaciones->sortBy('fecha')->values()->map(fn ($e) => ['f' => $e->fecha->format('d/m/y'), 'peso' => $e->peso, 'imc' => $e->imc]);
+        @endphp
+        const s=@json($datosGrafico);
         const el=document.getElementById('chNutri'); if(!el||!s.length) return;
         new Chart(el,{ type:'line',
             data:{ labels:s.map(x=>x.f), datasets:[

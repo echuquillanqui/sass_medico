@@ -35,7 +35,10 @@
     @push('scripts')
     <script>
     const MON = @json($mon);
-    const INS = @json($insumos->map(fn($i)=>['id'=>$i->id,'nombre'=>$i->nombre,'precio'=>(float)$i->precio,'stock'=>(float)$i->stock,'unidad'=>$i->unidad]));
+    @php
+        $catalogoInsumos = $insumos->map(fn ($i) => ['id' => $i->id, 'nombre' => $i->nombre, 'precio' => (float) $i->precio, 'stock' => (float) $i->stock, 'unidad' => $i->unidad]);
+    @endphp
+    const INS = @json($catalogoInsumos);
     function opts(){ return INS.map(i=>'<option value="'+i.id+'" data-p="'+i.precio+'" data-s="'+i.stock+'">'+i.nombre+' (stock '+i.stock+' '+i.unidad+')</option>').join(''); }
     function addItem(){
         const i = document.querySelectorAll('#items .disp-item').length;

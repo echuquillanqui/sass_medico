@@ -127,7 +127,10 @@
     <script>
     window.addEventListener('load', function(){
         if(!window.Chart) return;
-        const ctrl = @json($embarazo->exists ? $embarazo->controles->map(fn($c)=>['x'=>$c->semanas,'y'=>$c->altura_uterina])->filter(fn($p)=>$p['x']&&$p['y'])->values() : []);
+        @php
+            $datosControles = $embarazo->exists ? $embarazo->controles->map(fn ($c) => ['x' => $c->semanas, 'y' => $c->altura_uterina])->filter(fn ($p) => $p['x'] && $p['y'])->values() : [];
+        @endphp
+        const ctrl = @json($datosControles);
         const ref = []; for(let s=20;s<=36;s++){ ref.push({x:s,y:s}); }
         const el = document.getElementById('chAltura'); if(!el) return;
         new Chart(el, { type:'line',

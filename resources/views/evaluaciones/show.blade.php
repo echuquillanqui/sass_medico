@@ -113,7 +113,10 @@
     <script>
     window.addEventListener('load', function(){
         if(!window.Chart) return;
-        const s=@json($evaluaciones->sortBy('fecha')->values()->map(fn($e)=>['f'=>$e->fecha->format('d/m/y'),'v'=>is_numeric($e->dato($graf['campo'])) ? (float)$e->dato($graf['campo']) : null]));
+        @php
+            $datosGrafico = $evaluaciones->sortBy('fecha')->values()->map(fn ($e) => ['f' => $e->fecha->format('d/m/y'), 'v' => is_numeric($e->dato($graf['campo'])) ? (float) $e->dato($graf['campo']) : null]);
+        @endphp
+        const s=@json($datosGrafico);
         const pts=s.filter(x=>x.v!==null);
         const el=document.getElementById('chEval'); if(!el||!pts.length) return;
         new Chart(el,{ type:'line',
