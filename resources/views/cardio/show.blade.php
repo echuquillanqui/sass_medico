@@ -103,7 +103,10 @@
     <script>
     window.addEventListener('load', function(){
         if(!window.Chart) return;
-        const serie=@json($evaluaciones->sortBy('fecha')->values()->map(fn($e)=>['f'=>$e->fecha->format('d/m/y'),'s'=>$e->pa_sistolica,'d'=>$e->pa_diastolica]));
+        @php
+            $datosGrafico = $evaluaciones->sortBy('fecha')->values()->map(fn ($e) => ['f' => $e->fecha->format('d/m/y'), 's' => $e->pa_sistolica, 'd' => $e->pa_diastolica]);
+        @endphp
+        const serie=@json($datosGrafico);
         const el=document.getElementById('chPA'); if(!el||!serie.length) return;
         new Chart(el,{ type:'line',
             data:{ labels:serie.map(x=>x.f), datasets:[

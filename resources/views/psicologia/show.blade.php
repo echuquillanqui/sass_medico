@@ -85,7 +85,10 @@
     <script>
     window.addEventListener('load', function(){
         if(!window.Chart) return;
-        const s=@json($sesiones->sortBy('fecha')->values()->map(fn($x)=>['n'=>$x->numero ?? '','a'=>$x->estado_animo,'p'=>$x->progreso]));
+        @php
+            $datosGrafico = $sesiones->sortBy('fecha')->values()->map(fn ($x) => ['n' => $x->numero ?? '', 'a' => $x->estado_animo, 'p' => $x->progreso]);
+        @endphp
+        const s=@json($datosGrafico);
         const el=document.getElementById('chPsico'); if(!el||!s.length) return;
         new Chart(el,{ type:'line',
             data:{ labels:s.map((x,i)=>'S'+(x.n||i+1)), datasets:[
