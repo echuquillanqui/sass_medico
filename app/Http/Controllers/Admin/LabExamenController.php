@@ -18,7 +18,8 @@ class LabExamenController extends Controller
     public function index()
     {
         $examenes = LabExamen::with('componentes')->where('empresa_id', $this->empresaId())
-            ->whereNull('padre_id')->orderBy('categoria')->orderBy('nombre')->get();
+            ->whereNull('padre_id')->orderBy('categoria')->orderBy('nombre')
+            ->paginate(15)->withQueryString()->fragment('listado');
         $examenesPrincipales = LabExamen::where('empresa_id', $this->empresaId())
             ->whereNull('padre_id')->orderBy('nombre')->get();
 
@@ -87,7 +88,7 @@ class LabExamenController extends Controller
             $examen->componentes()->whereNotIn('id', $idsConservados)->delete();
         });
 
-        return back()->with('ok', 'Examen agrupado actualizado.');
+        return back()->with('ok', $componentes === null ? 'Examen actualizado.' : 'Examen agrupado actualizado.');
     }
 
     public function destroy(LabExamen $examen)
