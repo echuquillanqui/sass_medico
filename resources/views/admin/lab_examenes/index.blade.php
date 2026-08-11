@@ -121,14 +121,22 @@
     </style>
 
     @push('scripts')
+    @php
+        $reabrirExamenAgrupado = old('modo') === 'grupo' && !old('editando_id');
+        $componentesAnteriores = $reabrirExamenAgrupado ? old('componentes', []) : [];
+        $examenEditadoAnterior = old('editando_id') ? [
+            'id' => old('editando_id'),
+            'nombre' => old('nombre'),
+            'categoria' => old('categoria'),
+            'precio' => old('precio'),
+            'componentes' => old('componentes', []),
+        ] : null;
+    @endphp
     <script>
     var componenteIndice = 0;
-    var reabrirExamenAgrupado = @json(old('modo') === 'grupo' && !old('editando_id'));
-    var componentesAnteriores = @json(old('modo') === 'grupo' && !old('editando_id') ? old('componentes', []) : []);
-    var examenEditadoAnterior = @json(old('editando_id') ? [
-        'id' => old('editando_id'), 'nombre' => old('nombre'), 'categoria' => old('categoria'),
-        'precio' => old('precio'), 'componentes' => old('componentes', []),
-    ] : null);
+    var reabrirExamenAgrupado = @json($reabrirExamenAgrupado);
+    var componentesAnteriores = @json($componentesAnteriores);
+    var examenEditadoAnterior = @json($examenEditadoAnterior);
     var editarIndice = 0;
 
     function agregarComponente(datos){
