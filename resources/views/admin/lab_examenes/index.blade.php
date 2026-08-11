@@ -13,7 +13,7 @@
             <i class="fa-solid fa-circle-plus"></i><span><b>Registrar examen</b><small>Agrega un examen al catálogo</small></span>
         </button>
         <button type="button" class="exam-tab" id="tab-listado" role="tab" aria-selected="false" aria-controls="panel-listado" onclick="cambiarTabExamen('listado')">
-            <i class="fa-solid fa-vials"></i><span><b>Listado de exámenes</b><small>{{ $examenes->count() }} {{ $examenes->count() === 1 ? 'examen registrado' : 'exámenes registrados' }}</small></span>
+            <i class="fa-solid fa-vials"></i><span><b>Listado de exámenes</b><small>{{ $examenes->total() }} {{ $examenes->total() === 1 ? 'examen registrado' : 'exámenes registrados' }}</small></span>
         </button>
     </div>
 
@@ -62,7 +62,7 @@
                         <td style="text-align:right">
                             <div class="flex gap" style="justify-content:flex-end">
                                 <button type="button" class="btn btn-light btn-sm" onclick="verExamen({{ $e->id }})" title="Ver detalles del examen"><i class="fa-solid fa-eye"></i> Ver</button>
-                                @if($e->componentes->isNotEmpty())<button type="button" class="btn btn-light btn-sm" onclick='abrirEditarExamen(@json($e))' title="Editar examen agrupado"><i class="fa-solid fa-pen"></i> Editar</button>@endif
+                                <button type="button" class="btn btn-light btn-sm" onclick='abrirEditarExamen(@json($e))' title="Editar examen"><i class="fa-solid fa-pen"></i> Editar</button>
                                 <form method="POST" action="{{ route('admin.lab-examenes.destroy',$e) }}" onsubmit="return confirm('¿Eliminar este examen? Esta acción no se puede deshacer.')">@csrf @method('DELETE')<button class="btn btn-danger btn-sm" title="Eliminar examen"><i class="fa-solid fa-trash"></i> Eliminar</button></form>
                             </div>
                         </td>
@@ -73,6 +73,7 @@
                 </tbody>
             </table>
         </div>
+        {{ $examenes->links() }}
     </section>
 
     <div id="verExamenOverlay" class="exam-overlay" onclick="if(event.target===this)cerrarVerExamen()" aria-hidden="true">
@@ -89,19 +90,23 @@
     <div id="editarExamenOverlay" class="exam-overlay" onclick="if(event.target===this)cerrarEditarExamen()" aria-hidden="true">
         <div class="exam-modal" role="dialog" aria-modal="true" aria-labelledby="editarExamenTitulo">
             <div class="flex between mb">
-                <div><h3 id="editarExamenTitulo" style="margin:0">Editar examen agrupado</h3><small class="muted">Modifica sus datos, agrega componentes o cambia sus rangos.</small></div>
+                <div><h3 id="editarExamenTitulo" style="margin:0">Editar examen</h3><small id="editarExamenAyuda" class="muted">Modifica los datos del examen.</small></div>
                 <button type="button" class="btn btn-light btn-sm" onclick="cerrarEditarExamen()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form method="POST" id="editarExamenForm">
                 @csrf @method('PUT')
-                <input type="hidden" name="modo" value="grupo"><input type="hidden" name="editando_id" id="editandoId">
+                <input type="hidden" name="modo" value=""><input type="hidden" name="editando_id" id="editandoId">
                 <div class="form-grid mb">
                     <div class="field"><label>Nombre del examen *</label><input name="nombre" required maxlength="120"></div>
                     <div class="field"><label>Categoría</label><input name="categoria" maxlength="60"></div>
+                    <div class="field edit-individual-field"><label>Unidad</label><input name="unidad" maxlength="30"></div>
+                    <div class="field edit-individual-field"><label>Valor de referencia</label><input name="valor_referencia" maxlength="60"></div>
                     <div class="field full"><label>Precio del examen agrupado</label><input type="number" min="0" step="0.01" name="precio" value="0"></div>
                 </div>
-                <div class="flex between mb"><div><b>Exámenes incluidos</b><br><small class="muted">Edita la unidad o rango y agrega los componentes que necesites.</small></div><button type="button" class="btn btn-light btn-sm" onclick="agregarComponenteEditar()"><i class="fa-solid fa-plus"></i> Agregar examen</button></div>
-                <div id="componentesEditar" class="exam-components"></div>
+                <div id="editarComponentesBloque">
+                    <div class="flex between mb"><div><b>Exámenes incluidos</b><br><small class="muted">Edita la unidad o rango y agrega los componentes que necesites.</small></div><button type="button" class="btn btn-light btn-sm" onclick="agregarComponenteEditar()"><i class="fa-solid fa-plus"></i> Agregar examen</button></div>
+                    <div id="componentesEditar" class="exam-components"></div>
+                </div>
                 <div class="flex gap exam-actions"><button type="button" class="btn btn-light" onclick="cerrarEditarExamen()">Cancelar</button><button class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
             </form>
         </div>
@@ -160,6 +165,9 @@
             'nombre' => old('nombre'),
             'categoria' => old('categoria'),
             'precio' => old('precio'),
+            'unidad' => old('unidad'),
+            'valor_referencia' => old('valor_referencia'),
+            'es_grupo' => old('modo') === 'grupo',
             'componentes' => old('componentes', []),
         ] : null;
     @endphp
@@ -255,13 +263,21 @@
         editarIndice = 0;
         document.getElementById('componentesEditar').innerHTML = '';
         var form = document.getElementById('editarExamenForm');
+        var esGrupo = examen.es_grupo === true || (examen.componentes || []).length > 0;
         form.action = @json(route('admin.lab-examenes.index')) + '/' + examen.id;
         document.getElementById('editandoId').value = examen.id;
+        form.querySelector('[name="modo"]').value = esGrupo ? 'grupo' : '';
         form.querySelector('[name="nombre"]').value = examen.nombre || '';
         form.querySelector('[name="categoria"]').value = examen.categoria || '';
+        form.querySelector('[name="unidad"]').value = examen.unidad || '';
+        form.querySelector('[name="valor_referencia"]').value = examen.valor_referencia || '';
         form.querySelector('[name="precio"]').value = examen.precio || 0;
-        (examen.componentes || []).forEach(agregarComponenteEditar);
-        if(!(examen.componentes || []).length) agregarComponenteEditar();
+        document.getElementById('editarExamenTitulo').textContent = esGrupo ? 'Editar examen agrupado' : 'Editar examen';
+        document.getElementById('editarExamenAyuda').textContent = esGrupo ? 'Modifica sus datos, agrega componentes o cambia sus rangos.' : 'Modifica los datos del examen individual.';
+        document.getElementById('editarComponentesBloque').style.display = esGrupo ? 'block' : 'none';
+        form.querySelectorAll('.edit-individual-field').forEach(function(campo){ campo.style.display = esGrupo ? 'none' : 'block'; });
+        form.querySelector('[name="precio"]').closest('.field').querySelector('label').textContent = esGrupo ? 'Precio del examen agrupado' : 'Precio';
+        if(esGrupo) (examen.componentes || []).forEach(agregarComponenteEditar);
         var overlay = document.getElementById('editarExamenOverlay');
         overlay.classList.add('open'); overlay.setAttribute('aria-hidden','false');
     }
