@@ -29,7 +29,7 @@ class TenantData
             'pacientes'                => ['scope' => 'empresa', 'remap' => []],
             'servicios'                => ['scope' => 'empresa', 'remap' => []],
             'insumos'                  => ['scope' => 'empresa', 'remap' => []],
-            'lab_examenes'             => ['scope' => 'empresa', 'remap' => []],
+            'lab_examenes'             => ['scope' => 'empresa', 'remap' => ['padre_id' => 'lab_examenes']],
             'camas'                    => ['scope' => 'empresa', 'remap' => []],
             'horarios_medico'          => ['scope' => 'empresa', 'remap' => []],
             'donantes'                 => ['scope' => 'empresa', 'remap' => []],
