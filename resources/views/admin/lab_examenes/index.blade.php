@@ -35,19 +35,22 @@
         </div>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Examen / componente</th><th>Categoría</th><th>Referencia</th><th>Precio</th><th></th></tr></thead>
+                <thead><tr><th>Examen</th><th>Categoría</th><th>Referencia</th><th>Precio</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @forelse($examenes as $e)
                     <tr>
                         <td>
-                            @if($e->padre)<small class="muted"><i class="fa-solid fa-turn-up" style="transform:rotate(90deg)"></i> {{ $e->padre->nombre }}</small><br>@endif
                             <b>{{ $e->nombre }}</b>@if($e->unidad)<br><small class="muted">{{ $e->unidad }}</small>@endif
+                            @if($e->componentes->isNotEmpty())<br><small class="muted"><i class="fa-solid fa-layer-group"></i> {{ $e->componentes->count() }} componentes</small>@endif
                         </td>
                         <td>{{ $e->categoria ?? '—' }}</td>
                         <td>{{ $e->valor_referencia ?? '—' }}</td>
                         <td>@money($e->precio, null, 2)</td>
                         <td style="text-align:right">
-                            <form method="POST" action="{{ route('admin.lab-examenes.destroy',$e) }}" onsubmit="return confirm('¿Eliminar examen?')">@csrf @method('DELETE')<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></form>
+                            <div class="flex gap" style="justify-content:flex-end">
+                                @if($e->componentes->isNotEmpty())<button type="button" class="btn btn-light btn-sm" onclick='abrirEditarExamen(@json($e))' title="Editar examen agrupado"><i class="fa-solid fa-pen"></i> Editar</button>@endif
+                                <form method="POST" action="{{ route('admin.lab-examenes.destroy',$e) }}" onsubmit="return confirm('¿Eliminar examen?')">@csrf @method('DELETE')<button class="btn btn-danger btn-sm" title="Eliminar examen"><i class="fa-solid fa-trash"></i></button></form>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -55,6 +58,27 @@
                 @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="editarExamenOverlay" class="exam-overlay" onclick="if(event.target===this)cerrarEditarExamen()" aria-hidden="true">
+        <div class="exam-modal" role="dialog" aria-modal="true" aria-labelledby="editarExamenTitulo">
+            <div class="flex between mb">
+                <div><h3 id="editarExamenTitulo" style="margin:0">Editar examen agrupado</h3><small class="muted">Modifica sus datos, agrega componentes o cambia sus rangos.</small></div>
+                <button type="button" class="btn btn-light btn-sm" onclick="cerrarEditarExamen()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form method="POST" id="editarExamenForm">
+                @csrf @method('PUT')
+                <input type="hidden" name="modo" value="grupo"><input type="hidden" name="editando_id" id="editandoId">
+                <div class="form-grid mb">
+                    <div class="field"><label>Nombre del examen *</label><input name="nombre" required maxlength="120"></div>
+                    <div class="field"><label>Categoría</label><input name="categoria" maxlength="60"></div>
+                    <div class="field full"><label>Precio del examen agrupado</label><input type="number" min="0" step="0.01" name="precio" value="0"></div>
+                </div>
+                <div class="flex between mb"><div><b>Exámenes incluidos</b><br><small class="muted">Edita la unidad o rango y agrega los componentes que necesites.</small></div><button type="button" class="btn btn-light btn-sm" onclick="agregarComponenteEditar()"><i class="fa-solid fa-plus"></i> Agregar examen</button></div>
+                <div id="componentesEditar" class="exam-components"></div>
+                <div class="flex gap exam-actions"><button type="button" class="btn btn-light" onclick="cerrarEditarExamen()">Cancelar</button><button class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
+            </form>
         </div>
     </div>
 
@@ -99,8 +123,13 @@
     @push('scripts')
     <script>
     var componenteIndice = 0;
-    var reabrirExamenAgrupado = @json(old('modo') === 'grupo');
-    var componentesAnteriores = @json(old('modo') === 'grupo' ? old('componentes', []) : []);
+    var reabrirExamenAgrupado = @json(old('modo') === 'grupo' && !old('editando_id'));
+    var componentesAnteriores = @json(old('modo') === 'grupo' && !old('editando_id') ? old('componentes', []) : []);
+    var examenEditadoAnterior = @json(old('editando_id') ? [
+        'id' => old('editando_id'), 'nombre' => old('nombre'), 'categoria' => old('categoria'),
+        'precio' => old('precio'), 'componentes' => old('componentes', []),
+    ] : null);
+    var editarIndice = 0;
 
     function agregarComponente(datos){
         datos = datos || {};
@@ -123,6 +152,38 @@
         boton.closest('.exam-component').remove();
         if(!contenedor.children.length) agregarComponente();
     }
+    function agregarComponenteEditar(datos){
+        datos = datos || {};
+        var indice = editarIndice++;
+        var fila = document.createElement('div');
+        fila.className = 'exam-component';
+        fila.innerHTML = '<input type="hidden" name="componentes['+indice+'][id]">'+
+            '<div class="field component-name"><label>Nombre *</label><input name="componentes['+indice+'][nombre]" required maxlength="120"></div>'+
+            '<div class="field"><label>Unidad</label><input name="componentes['+indice+'][unidad]" maxlength="30"></div>'+
+            '<div class="field"><label>Rango de referencia</label><input name="componentes['+indice+'][valor_referencia]" maxlength="60"></div>'+
+            '<div class="field"><label>Precio</label><input type="number" min="0" step="0.01" name="componentes['+indice+'][precio]"></div>'+
+            '<button type="button" class="btn btn-danger btn-sm remove-component" onclick="this.closest(\'.exam-component\').remove()" title="Quitar examen"><i class="fa-solid fa-trash"></i></button>';
+        ['id','nombre','unidad','valor_referencia','precio'].forEach(function(campo){ fila.querySelector('[name$="['+campo+']"]').value = datos[campo] || (campo === 'precio' ? 0 : ''); });
+        document.getElementById('componentesEditar').appendChild(fila);
+    }
+    function abrirEditarExamen(examen){
+        editarIndice = 0;
+        document.getElementById('componentesEditar').innerHTML = '';
+        var form = document.getElementById('editarExamenForm');
+        form.action = @json(route('admin.lab-examenes.index')) + '/' + examen.id;
+        document.getElementById('editandoId').value = examen.id;
+        form.querySelector('[name="nombre"]').value = examen.nombre || '';
+        form.querySelector('[name="categoria"]').value = examen.categoria || '';
+        form.querySelector('[name="precio"]').value = examen.precio || 0;
+        (examen.componentes || []).forEach(agregarComponenteEditar);
+        if(!(examen.componentes || []).length) agregarComponenteEditar();
+        var overlay = document.getElementById('editarExamenOverlay');
+        overlay.classList.add('open'); overlay.setAttribute('aria-hidden','false');
+    }
+    function cerrarEditarExamen(){
+        var overlay = document.getElementById('editarExamenOverlay');
+        overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true');
+    }
     function abrirExamenAgrupado(){
         var overlay = document.getElementById('examenAgrupadoOverlay');
         if(!document.getElementById('componentesExamen').children.length) agregarComponente();
@@ -135,7 +196,8 @@
     }
     componentesAnteriores.forEach(agregarComponente);
     if(reabrirExamenAgrupado) abrirExamenAgrupado();
-    document.addEventListener('keydown',function(event){ if(event.key==='Escape') cerrarExamenAgrupado(); });
+    if(examenEditadoAnterior) abrirEditarExamen(examenEditadoAnterior);
+    document.addEventListener('keydown',function(event){ if(event.key==='Escape'){ cerrarExamenAgrupado(); cerrarEditarExamen(); } });
     </script>
     @endpush
 @endsection

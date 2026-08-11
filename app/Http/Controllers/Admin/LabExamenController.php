@@ -17,8 +17,8 @@ class LabExamenController extends Controller
 
     public function index()
     {
-        $examenes = LabExamen::with('padre')->where('empresa_id', $this->empresaId())
-            ->orderByRaw('padre_id is not null')->orderBy('categoria')->orderBy('nombre')->get();
+        $examenes = LabExamen::with('componentes')->where('empresa_id', $this->empresaId())
+            ->whereNull('padre_id')->orderBy('categoria')->orderBy('nombre')->get();
         $examenesPrincipales = LabExamen::where('empresa_id', $this->empresaId())
             ->whereNull('padre_id')->orderBy('nombre')->get();
 
@@ -55,15 +55,48 @@ class LabExamenController extends Controller
     public function update(Request $request, LabExamen $examen)
     {
         abort_unless($examen->empresa_id === $this->empresaId(), 403);
-        $examen->update($this->validated($request));
 
-        return back()->with('ok', 'Examen actualizado.');
+        $data = $this->validated($request);
+        $componentes = $data['componentes'] ?? null;
+        unset($data['componentes'], $data['modo'], $data['editando_id']);
+
+        DB::transaction(function () use ($examen, $data, $componentes) {
+            $examen->update($data);
+
+            if ($componentes === null) {
+                return;
+            }
+
+            $idsConservados = [];
+            foreach ($componentes as $componente) {
+                $id = $componente['id'] ?? null;
+                unset($componente['id']);
+                $componente['empresa_id'] = $this->empresaId();
+                $componente['categoria'] = $componente['categoria'] ?? $examen->categoria;
+                $componente['precio'] = $componente['precio'] ?? 0;
+
+                if ($id) {
+                    $hijo = $examen->componentes()->whereKey($id)->firstOrFail();
+                    $hijo->update($componente);
+                    $idsConservados[] = $hijo->id;
+                } else {
+                    $idsConservados[] = $examen->componentes()->create($componente)->id;
+                }
+            }
+
+            $examen->componentes()->whereNotIn('id', $idsConservados)->delete();
+        });
+
+        return back()->with('ok', 'Examen agrupado actualizado.');
     }
 
     public function destroy(LabExamen $examen)
     {
         abort_unless($examen->empresa_id === $this->empresaId(), 403);
-        $examen->delete();
+        DB::transaction(function () use ($examen) {
+            $examen->componentes()->delete();
+            $examen->delete();
+        });
 
         return back()->with('ok', 'Examen eliminado.');
     }
@@ -83,7 +116,9 @@ class LabExamenController extends Controller
             'valor_referencia' => ['nullable', 'string', 'max:60'],
             'precio' => ['nullable', 'numeric', 'min:0'],
             'modo' => ['nullable', Rule::in(['grupo'])],
+            'editando_id' => ['nullable', 'integer'],
             'componentes' => ['exclude_unless:modo,grupo', 'required_if:modo,grupo', 'array', 'min:1'],
+            'componentes.*.id' => ['nullable', 'integer'],
             'componentes.*.nombre' => ['required', 'string', 'max:120'],
             'componentes.*.categoria' => ['nullable', 'string', 'max:60'],
             'componentes.*.unidad' => ['nullable', 'string', 'max:30'],
