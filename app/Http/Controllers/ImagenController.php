@@ -40,6 +40,7 @@ class ImagenController extends Controller
             'medico_id' => ['nullable', 'exists:users,id'],
             'modalidad' => ['required', 'string', 'max:60'],
             'region' => ['nullable', 'string', 'max:80'],
+            'tipo_estudio' => ['required', 'string', 'max:160'],
             'fecha' => ['required', 'date'],
             'indicacion' => ['nullable', 'string'],
         ]);
@@ -95,11 +96,32 @@ class ImagenController extends Controller
         return back()->with('ok', 'Archivo cargado.');
     }
 
+    public function subirOrden(Request $request, ImagenEstudio $imagen)
+    {
+        abort_unless($imagen->empresa_id === $this->empresaId(), 403);
+        $request->validate(['orden' => ['required', 'file', 'max:15360', 'mimes:jpg,jpeg,png,webp,pdf']]);
+
+        if ($imagen->orden_archivo) {
+            Storage::disk('public')->delete($imagen->orden_archivo);
+        }
+
+        $file = $request->file('orden');
+        $imagen->update([
+            'orden_archivo' => $file->store('ordenes/'.$this->empresaId(), 'public'),
+            'orden_nombre' => $file->getClientOriginalName(),
+        ]);
+
+        return back()->with('ok', 'Orden médica cargada.');
+    }
+
     public function destroy(ImagenEstudio $imagen)
     {
         abort_unless($imagen->empresa_id === $this->empresaId(), 403);
         if ($imagen->archivo) {
             Storage::disk('public')->delete($imagen->archivo);
+        }
+        if ($imagen->orden_archivo) {
+            Storage::disk('public')->delete($imagen->orden_archivo);
         }
         $imagen->delete();
 

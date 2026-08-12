@@ -266,6 +266,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/imagenes/{imagen}', [ImagenController::class, 'show'])->name('imagenes.show');
         Route::put('/imagenes/{imagen}/informe', [ImagenController::class, 'guardarInforme'])->name('imagenes.informe');
         Route::post('/imagenes/{imagen}/archivo', [ImagenController::class, 'subirArchivo'])->name('imagenes.archivo');
+        Route::post('/imagenes/{imagen}/orden', [ImagenController::class, 'subirOrden'])->name('imagenes.orden');
         Route::get('/imagenes/{imagen}/pdf', [ImagenController::class, 'pdf'])->name('imagenes.pdf');
         Route::delete('/imagenes/{imagen}', [ImagenController::class, 'destroy'])->name('imagenes.destroy');
 

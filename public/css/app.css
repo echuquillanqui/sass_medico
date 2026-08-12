@@ -79,6 +79,13 @@ a{text-decoration:none;color:inherit}
 .icon-btn .badge{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--pink)}
 
 .content{padding:6px 30px 40px;flex:1}
+.imagenes-fluid{width:100%;max-width:none}
+.imagenes-fluid .table-wrap{width:100%}
+.order-upload-form{display:inline-block;margin:0}
+.order-upload-form input[type="file"]{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+.btn-order-uploaded{background:#075dcc!important;border-color:#075dcc!important;color:#fff!important;box-shadow:0 5px 14px rgba(7,93,204,.24)}
+.btn-order-uploaded:hover{background:#064da8!important;border-color:#064da8!important;color:#fff!important}
+.btn-order-empty{background:transparent!important;border:1px solid #075dcc!important;color:#075dcc!important;cursor:pointer}
 .page-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 22px;flex-wrap:wrap;gap:12px}
 .page-head h1{font-size:22px;margin:0;font-weight:600}
 .page-head p{margin:2px 0 0;color:var(--ink-soft);font-size:13px}
