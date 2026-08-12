@@ -27,6 +27,7 @@
                     @foreach($modalidades as $mo)<option value="{{ $mo }}" @selected(old('modalidad')==$mo)>{{ $mo }}</option>@endforeach
                 </select></div>
             <div class="field"><label>Región / Zona</label><input name="region" value="{{ old('region') }}" placeholder="Tórax, Abdomen, Rodilla..."></div>
+            <div class="field full"><label>Tipo de estudio según la orden *</label><input name="tipo_estudio" value="{{ old('tipo_estudio') }}" placeholder="Ej.: TEM cerebral con o sin contraste" required></div>
             <div class="field"><label>Fecha *</label><input type="date" name="fecha" value="{{ old('fecha', now()->toDateString()) }}" required></div>
             <div class="field full"><label>Indicación / motivo del estudio</label><textarea name="indicacion">{{ old('indicacion') }}</textarea></div>
         </div>
