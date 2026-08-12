@@ -34,12 +34,7 @@
                 </div>
                 <div class="flex gap" style="margin-top:14px">
                     <button type="button" class="btn btn-light btn-sm"
-                        onclick='planModal("edit", {{ Illuminate\Support\Js::from([
-                            "id"=>$p->id, "nombre"=>$p->nombre, "precio"=>$p->precio, "ciclo"=>$p->ciclo,
-                            "le"=>$p->limite_especialidades, "lu"=>$p->limite_usuarios, "desc"=>$p->descripcion,
-                            "orden"=>$p->orden, "dest"=>(bool)$p->destacado, "activo"=>(bool)$p->activo,
-                            "action"=>route("admin.planes.update",$p),
-                        ]) }})'><i class="fa-solid fa-pen"></i> Editar</button>
+                        onclick="planModal('edit', PLAN_DATA[{{ $p->id }}])"><i class="fa-solid fa-pen"></i> Editar</button>
                     <form method="POST" action="{{ route('admin.planes.destroy',$p) }}" onsubmit="return confirm('¿Eliminar el plan {{ $p->nombre }}?')">
                         @csrf @method('DELETE')<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i> Eliminar</button>
                     </form>
@@ -91,6 +86,21 @@
     @push('scripts')
     <script>
     var PLAN_STORE = @json(route('admin.planes.store'));
+    var PLAN_DATA = {{ Illuminate\Support\Js::from($planes->mapWithKeys(fn ($plan) => [
+        $plan->id => [
+            'id' => $plan->id,
+            'nombre' => $plan->nombre,
+            'precio' => $plan->precio,
+            'ciclo' => $plan->ciclo,
+            'le' => $plan->limite_especialidades,
+            'lu' => $plan->limite_usuarios,
+            'desc' => $plan->descripcion,
+            'orden' => $plan->orden,
+            'dest' => (bool) $plan->destacado,
+            'activo' => (bool) $plan->activo,
+            'action' => route('admin.planes.update', $plan),
+        ],
+    ])) }};
     function planModal(mode, data){
         var f=document.getElementById('planForm');
         if(mode==='create'){
